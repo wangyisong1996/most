@@ -35,6 +35,8 @@ typedef struct {
 
 typedef struct {
 	DucknetIPv4Address ip;
+	DucknetIPv4Address gateway_ip;
+	ducknet_u8 prefix_len;
 	int (*packet_handle)(DucknetIPv4Header *, int);
 } DucknetIPv4Config;
 

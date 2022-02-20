@@ -38,7 +38,7 @@ namespace PCI {
 	
 	// Flag to do "lspci" at bootup
 	static int pci_show_devs = 1;
-	static int pci_show_addrs = 0;
+	static int pci_show_addrs = 1;
 	
 	// PCI "configuration mechanism one"
 	static uint32_t pci_conf1_addr_ioport = 0x0cf8;
@@ -70,6 +70,8 @@ namespace PCI {
 		{ 0x8086, 0x15b8, &pci_store },  // I219-V H310CM-ITX/ac
 		{ 0x8086, 0x0d55, &pci_store },  // B460M TUF Gaming
 		{ 0x8086, 0x15fa, &pci_store },  // H510M-HDV/M.2
+		// And virtio net
+		{ 0x1af4, 0x1000, &pci_store },  // Virtio Network
 		{ 0, 0, 0 },
 	};
 	
@@ -241,6 +243,8 @@ namespace PCI {
 					bar_width = 8;
 				}
 				
+				f->reg_is_io[regnum] = false;
+				
 				size = PCI_MAPREG_MEM_SIZE(rv);
 				base = PCI_MAPREG_MEM_ADDR(oldv);
 				if (pci_show_addrs) {
@@ -248,6 +252,8 @@ namespace PCI {
 						regnum, size, base);
 				}
 			} else {
+				f->reg_is_io[regnum] = true;
+				
 				size = PCI_MAPREG_IO_SIZE(rv);
 				base = PCI_MAPREG_IO_ADDR(oldv);
 				if (pci_show_addrs) {
@@ -287,14 +293,18 @@ namespace PCI {
 	
 	// ==== For user mode PCI drivers ====
 	
-	uint64_t map_device(uint32_t key1, uint32_t key2, uint64_t base, uint64_t maxlen) {
+	uint64_t map_device(uint32_t key1, uint32_t key2, uint64_t base, uint64_t maxlen, uint32_t bar) {
 		bool found = false;
 		uint64_t reg_base, reg_size;
 		for (int i = 0; i < n_stored_pci_devices; i++) {
 			uint32_t dev_id = stored_pci_devices[i].dev_id;
 			if (PCI_VENDOR(dev_id) == key1 && PCI_PRODUCT(dev_id) == key2) {
-				reg_base = stored_pci_devices[i].reg_base[0];
-				reg_size = stored_pci_devices[i].reg_size[0];
+				if (stored_pci_devices[i].reg_is_io[bar]) {
+					continue;
+				}
+				
+				reg_base = stored_pci_devices[i].reg_base[bar];
+				reg_size = stored_pci_devices[i].reg_size[bar];
 				found = true;
 				break;
 			}
@@ -312,6 +322,22 @@ namespace PCI {
 		} else {
 			return -1ull;
 		}
+	}
+	
+	uint64_t get_device_reg_base(uint32_t key1, uint32_t key2, uint32_t bar) {
+		for (int i = 0; i < n_stored_pci_devices; i++) {
+			uint32_t dev_id = stored_pci_devices[i].dev_id;
+			if (PCI_VENDOR(dev_id) == key1 && PCI_PRODUCT(dev_id) == key2) {
+				if (!stored_pci_devices[i].reg_is_io[bar]) {
+					continue;
+				}
+				
+				uint64_t reg_base = stored_pci_devices[i].reg_base[bar];
+				return reg_base;
+			}
+		}
+		
+		return -1ull;
 	}
 	
 }

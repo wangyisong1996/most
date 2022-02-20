@@ -23,6 +23,7 @@ namespace Utils {
 		return x << (63 - hi) >> (lo + 63 - hi);
 	}
 	
+	__attribute__((__noreturn__))
 	void GG_reboot();
 }
 

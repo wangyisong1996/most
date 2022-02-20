@@ -14,12 +14,14 @@
 
 using NetworkDriver::mac;
 using NetworkDriver::ip;
+using NetworkDriver::gateway;
+using NetworkDriver::prefix_len;
 
 using std::min;
 
 namespace DuckServer {
 	static DucknetMACAddress my_mac;
-	static DucknetIPv4Address my_ip;
+	static DucknetIPv4Address my_ip, gateway_ip;
 	
 	static uint32_t microcode_orig_rev = 0;
 	
@@ -377,16 +379,28 @@ namespace DuckServer {
 	static void enable_turbo_boost() {	
 		LDEBUG_ENTER_RET();
 		
-		const uint32_t IA32_MISC_ENABLE = 416;
-		const uint64_t TURBO_MODE_DISABLE = 1ul << 38;
-		uint64_t misc = x86_64::rdmsr(IA32_MISC_ENABLE);
-		x86_64::wrmsr(IA32_MISC_ENABLE, misc & ~TURBO_MODE_DISABLE);
-		misc = x86_64::rdmsr(IA32_MISC_ENABLE) & TURBO_MODE_DISABLE;
-		LINFO("Enabled turbo boost: %d", misc ? 0 : 1);
-		const uint32_t IA32_PERF_CTL = 409;
-		const uint32_t freq = 46;  // freq * 100
-		x86_64::wrmsr(IA32_PERF_CTL, freq << 8);
-		LINFO("CPU Freq set to %u MHz", freq * 100);
+		LWARN("[2021-03-14] not enabling turbo boost");
+		// const uint32_t IA32_MISC_ENABLE = 416;
+		// const uint64_t TURBO_MODE_DISABLE = 1ul << 38;
+		// uint64_t misc = x86_64::rdmsr(IA32_MISC_ENABLE);
+		// x86_64::wrmsr(IA32_MISC_ENABLE, misc & ~TURBO_MODE_DISABLE);
+		// misc = x86_64::rdmsr(IA32_MISC_ENABLE) & TURBO_MODE_DISABLE;
+		// LINFO("Enabled turbo boost: %d", misc ? 0 : 1);
+		// const uint32_t IA32_PERF_CTL = 409;
+		// const uint32_t freq = 36;  // freq * 100  [2020-01-15] i5-3470 3.6GHz
+		// x86_64::wrmsr(IA32_PERF_CTL, freq << 8);
+		// LINFO("CPU Freq set to %u MHz", freq * 100);
+		
+		// const uint32_t IA32_MISC_ENABLE = 416;
+		// const uint64_t TURBO_MODE_DISABLE = 1ul << 38;
+		// uint64_t misc = x86_64::rdmsr(IA32_MISC_ENABLE);
+		// x86_64::wrmsr(IA32_MISC_ENABLE, misc & ~TURBO_MODE_DISABLE);
+		// misc = x86_64::rdmsr(IA32_MISC_ENABLE) & TURBO_MODE_DISABLE;
+		// LINFO("Enabled turbo boost: %d", misc ? 0 : 1);
+		// const uint32_t IA32_PERF_CTL = 409;
+		// const uint32_t freq = 46;  // freq * 100
+		// x86_64::wrmsr(IA32_PERF_CTL, freq << 8);
+		// LINFO("CPU Freq set to %u MHz", freq * 100);
 		// TODO: set to correct freq
 	}
 	
@@ -401,6 +415,9 @@ namespace DuckServer {
 		};
 		my_ip = (DucknetIPv4Address) {
 			.a = { ip[3], ip[2], ip[1], ip[0] }
+		};
+		gateway_ip = (DucknetIPv4Address) {
+			.a = { gateway[3], gateway[2], gateway[1], gateway[0] }
 		};
 		
 		DucknetConfig conf = {
@@ -423,6 +440,8 @@ namespace DuckServer {
 			},
 			.ipv4 = {
 				.ip = my_ip,
+				.gateway_ip = gateway_ip,
+				.prefix_len = prefix_len,
 				.packet_handle = NULL,
 			},
 			.icmp = {

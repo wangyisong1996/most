@@ -65,10 +65,11 @@ namespace Timer {
 	}
 	
 	static void enable_performance_counters() {
-		x86_64::wrmsr(x86_64::FIXED_CTR_CTRL, 2 * 0x111);  // userspace counters
-		x86_64::wrmsr(x86_64::PERF_GLOBAL_CTRL, 7ull << 32);
+		LWARN("[2021-03-14] performance counters skipped");
+		// x86_64::wrmsr(x86_64::FIXED_CTR_CTRL, 2 * 0x111);  // userspace counters
+		// x86_64::wrmsr(x86_64::PERF_GLOBAL_CTRL, 7ull << 32);
 		
-		LDEBUG("Userspace performance counters enabled");
+		// LDEBUG("Userspace performance counters enabled");
 	}
 	
 	void init() {
@@ -98,15 +99,20 @@ namespace Timer {
 	}
 	
 	void reset_performance_counters() {
-		x86_64::wrmsr(x86_64::INST_RETIRED_ANY, 0);
-		x86_64::wrmsr(x86_64::CPU_CLK_UNHALTED_THREAD, 0);
-		x86_64::wrmsr(x86_64::CPU_CLK_UNHALTED_REF_TSC, 0);
+		LWARN("[2021-03-14] performance counters skipped");
+		// x86_64::wrmsr(x86_64::INST_RETIRED_ANY, 0);
+		// x86_64::wrmsr(x86_64::CPU_CLK_UNHALTED_THREAD, 0);
+		// x86_64::wrmsr(x86_64::CPU_CLK_UNHALTED_REF_TSC, 0);
 	}
 	
 	void read_performance_counters(uint64_t &inst,
 		uint64_t &clk_thread, uint64_t &clk_ref_tsc) {
-		inst = x86_64::rdmsr(x86_64::INST_RETIRED_ANY);
-		clk_thread = x86_64::rdmsr(x86_64::CPU_CLK_UNHALTED_THREAD);
-		clk_ref_tsc = x86_64::rdmsr(x86_64::CPU_CLK_UNHALTED_REF_TSC);
+		LWARN("[2021-03-14] performance counters skipped");
+		inst = 1;
+		clk_thread = 1;
+		clk_ref_tsc = 1;
+		// inst = x86_64::rdmsr(x86_64::INST_RETIRED_ANY);
+		// clk_thread = x86_64::rdmsr(x86_64::CPU_CLK_UNHALTED_THREAD);
+		// clk_ref_tsc = x86_64::rdmsr(x86_64::CPU_CLK_UNHALTED_REF_TSC);
 	}
 }

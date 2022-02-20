@@ -6,6 +6,8 @@
 namespace NetworkDriver {
 	extern uint8_t ip[4];
 	extern uint8_t mac[6];
+	extern uint8_t gateway[4];
+	extern uint8_t prefix_len;
 	
 	void init();
 	

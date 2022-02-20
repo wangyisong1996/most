@@ -11,6 +11,7 @@ static int (*packet_handle)(DucknetARPHeader *, int);
 const int ARP_TABLE_SIZE = 100;
 const int ARP_EXPIRE_TIMEOUT_MS = 30000;
 const int ARP_QUERY_TIMEOUT_MS = 1000;
+const bool ARP_NEVER_EXPIRE = true;
 
 static struct {
 	DucknetIPv4Address ip;
@@ -80,7 +81,7 @@ int ducknet_arp_idle() {
 	
 	id = 0;
 	for (int i = 0; i < n_arp_entries; i++) {
-		if (ducknet_currenttime > arp_table[i].expire_time) {
+		if (!ARP_NEVER_EXPIRE && ducknet_currenttime > arp_table[i].expire_time) {
 			continue;
 		}
 		arp_table[id++] = arp_table[i];

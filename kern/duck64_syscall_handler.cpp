@@ -7,6 +7,7 @@
 #include <inc/vga_buffer.hpp>
 #include <inc/serial.hpp>
 #include <inc/x86_64.hpp>
+#include <inc/utils.hpp>
 
 using VGA_Buffer::writer;
 
@@ -94,6 +95,16 @@ long __duck64__syscall_handler(long a1, long a2, long a3, long, long, long, long
 			return 0;
 		case SYS_fstat:
 			return duck_fstat((int) a1, (struct stat *) a2);
+		case SYS_rt_sigprocmask:
+			return 0;
+		case SYS_rt_sigaction:
+			return 0;
+		case SYS_sigaltstack:
+			return 0;
+		case SYS_set_tid_address:
+			return 12345;
+		case SYS_tkill:  // for abort()
+			Utils::GG_reboot();
 		default:
 			return -1;
 	}

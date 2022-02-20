@@ -1,3 +1,7 @@
+# Codes for MO's Trading
+
+Run with `make run-lowlatency`.
+
 # JudgeDuck-OS-64-GRUB
 JudgeDuck-OS Targeting x86-64 based on GRUB
 

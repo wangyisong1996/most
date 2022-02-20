@@ -18,6 +18,7 @@
 #include <inc/scheduler.hpp>
 #include <inc/judger.hpp>
 #include <inc/abi.hpp>
+#include <inc/contestant.hpp>
 
 static void print_hello() {
 	printf("Hello world!\n");
@@ -68,6 +69,7 @@ static void run_test(const char *elf_start, const char *elf_end) {
 }
 
 static void run_tests() {
+	return;
 	LINFO("Running tests");
 	
 	extern const char _binary_hello_elf_start[];
@@ -97,16 +99,14 @@ int main() {
 	
 	PCI::init();
 	NetworkDriver::init();
-	DuckServer::init();
-	Scheduler::init();
-	Judger::init();
+	Contestant::init();
 	
 	run_tests();
 	
 	LINFO("Welcome to JudgeDuck-OS-64 !!!");
 	LINFO("ABI Version %s", ABI::version_str);
 	
-	DuckServer::run();
+	Contestant::run();
 	// Should not return
 	
 	x86_64::reboot();

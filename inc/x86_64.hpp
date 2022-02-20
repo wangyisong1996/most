@@ -5,6 +5,10 @@
 #include <x86intrin.h>
 
 namespace x86_64 {
+	static inline void memory_barrier() {
+		asm volatile("" : : : "memory");
+	}
+	
 	static inline void outb(int port, uint8_t data) {
 		__asm__ volatile ("outb %0, %w1" : : "a" (data), "d" (port));
 	}
@@ -147,10 +151,12 @@ namespace x86_64 {
 	const uint32_t CStar = 0xC0000083;
 	const uint32_t SFMask = 0xC0000084;
 	
+	__attribute__((__noreturn__))
 	static inline void reboot() {
 		uint64_t a[2] = { 0 };
 		lidt(a);
 		__asm__ volatile ("int3");
+		while (1);
 	}
 }
 

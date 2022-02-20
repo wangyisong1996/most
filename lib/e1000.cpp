@@ -207,6 +207,8 @@ namespace e1000 {
 			return -1;
 		}
 		
+		LINFO("send len %d", cnt);
+		
 		if ((e1000_tdt + 1) % TQSIZE == e1000_tdh) {
 			e1000_tdh = *(volatile uint32_t *) (e1000 + 0x3810);
 		}
@@ -268,6 +270,7 @@ namespace e1000 {
 			*(volatile uint32_t *) (e1000 + 0x2818) = e1000_rdt;  // ???
 			e1000_rdt_real = e1000_rdt;
 		}
+		if (len != -1) LINFO("recv len %d", len);
 		return len;
 	}
 	

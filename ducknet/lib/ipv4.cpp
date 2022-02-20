@@ -1,6 +1,7 @@
 #include <ducknet_ipv4.h>
 #include <ducknet_icmp.h>
 #include <ducknet_udp.h>
+// #include <ducknet_tcp.h>
 #include <ducknet_ether.h>
 #include <ducknet_arp.h>
 #include <ducknet_phy.h>
@@ -12,11 +13,14 @@ static int (*packet_handle)(DucknetIPv4Header *, int);
 
 DucknetIPv4Address ducknet_ip;
 
+static DucknetIPv4Address gateway_ip;
+static ducknet_u8 prefix_len;
+
 const int TOSEND_TABLE_SIZE = 64;
 const int TOSEND_TIMEOUT_MS = 5000;
 
 static struct {
-	DucknetIPv4Address dst_ip;
+	DucknetIPv4Address ether_dst_ip;
 	ducknet_time_t expire_time;
 	int pkt_len;
 	char pkt[MAX_MTU + 64];
@@ -29,6 +33,8 @@ static ducknet_u64 idle_delay;
 
 int ducknet_ipv4_init(const DucknetIPv4Config *conf) {
 	ducknet_ip = conf->ip;
+	gateway_ip = conf->gateway_ip;
+	prefix_len = conf->prefix_len;
 	packet_handle = conf->packet_handle;
 	
 	memset(tosend_free, 0, sizeof(tosend_free));
@@ -104,29 +110,38 @@ static int find_tosend_free() {
 	return -1;
 }
 
+static inline bool match_prefix(DucknetIPv4Address a, DucknetIPv4Address b, int prefix_len) {
+	return (ducknet_u64) (a.addr ^ b.addr) >> (32 - prefix_len) == 0;
+}
+
 int ducknet_ipv4_send(DucknetIPv4Address dst, ducknet_u8 protocol, const void *payload, int len) {
-	DucknetMACAddress dst_mac;
-	if (ducknet_arp_lookup(dst, &dst_mac) >= 0) {
+	DucknetIPv4Address real_dst = dst, ether_dst = dst;
+	if (!match_prefix(dst, ducknet_ip, prefix_len)) {
+		ether_dst = gateway_ip;
+	}
+	
+	DucknetMACAddress ether_dst_mac;
+	if (ducknet_arp_lookup(ether_dst, &ether_dst_mac) >= 0) {
 		int r;
-		if ((r = ipv4_build_packet(ducknet_sendbuf, dst, protocol, payload, len)) < 0) {
+		if ((r = ipv4_build_packet(ducknet_sendbuf, real_dst, protocol, payload, len)) < 0) {
 			return r;
 		}
 		DucknetEtherHeader *eth_hdr = (DucknetEtherHeader *) ducknet_sendbuf;
-		eth_hdr->dst = dst_mac;
+		eth_hdr->dst = ether_dst_mac;
 		return ducknet_phy_send(eth_hdr, len + sizeof(DucknetIPv4Header) + sizeof(DucknetEtherHeader));
 	}
 	int r;
-	if ((r = ducknet_arp_query(dst)) < 0) {
+	if ((r = ducknet_arp_query(ether_dst)) < 0) {
 		// Do nothing ???
 	}
 	int id = find_tosend_free();
 	if (id == -1) {
 		return -1;
 	}
-	if ((r = ipv4_build_packet(tosend_table[id].pkt, dst, protocol, payload, len)) < 0) {
+	if ((r = ipv4_build_packet(tosend_table[id].pkt, real_dst, protocol, payload, len)) < 0) {
 		return r;
 	}
-	tosend_table[id].dst_ip = dst;  // TODO routing
+	tosend_table[id].ether_dst_ip = ether_dst;  // TODO routing
 	tosend_table[id].expire_time = ducknet_time_add_ms(ducknet_currenttime, TOSEND_TIMEOUT_MS);
 	tosend_table[id].pkt_len = len + sizeof(DucknetIPv4Header) + sizeof(DucknetEtherHeader);
 	tosend_free[id >> 5] &= ~(1u << (id & 31));
@@ -149,14 +164,14 @@ int ducknet_ipv4_idle() {
 			tosend_free[i >> 5] |= 1u << (i & 31);
 			continue;
 		}
-		DucknetMACAddress dst_mac;
-		if (ducknet_arp_lookup(tosend_table[i].dst_ip, &dst_mac) >= 0) {
+		DucknetMACAddress ether_dst_mac;
+		if (ducknet_arp_lookup(tosend_table[i].ether_dst_ip, &ether_dst_mac) >= 0) {
 			tosend_free[i >> 5] |= 1u << (i & 31);
 			DucknetEtherHeader *eth_hdr = (DucknetEtherHeader *) tosend_table[i].pkt;
-			eth_hdr->dst = dst_mac;
+			eth_hdr->dst = ether_dst_mac;
 			ducknet_phy_send(eth_hdr, tosend_table[i].pkt_len);
 		} else {
-			ducknet_arp_query(tosend_table[i].dst_ip);
+			ducknet_arp_query(tosend_table[i].ether_dst_ip);
 		}
 	}
 	return 0;
@@ -184,6 +199,8 @@ int ducknet_ipv4_packet_handle(void *pkt, int len) {
 			return ducknet_icmp_packet_handle(hdr->src, hdr->dst, hdr + 1, content_len);
 		case DUCKNET_IPv4_UDP:
 			return ducknet_udp_packet_handle(hdr->src, hdr->dst, hdr + 1, content_len);
+		// case DUCKNET_IPv4_TCP:
+		// 	return ducknet_tcp_packet_handle(hdr->src, hdr->dst, hdr + 1, content_len);
 		default:
 			return -1;
 	}
