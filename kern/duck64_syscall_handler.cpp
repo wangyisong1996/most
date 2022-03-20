@@ -17,7 +17,7 @@ static size_t duck_write(int fd, const char *buf, size_t len) {
 	}
 	
 	writer->write_buf(buf, len);
-	Serial::write_buf(buf, len);
+	// Serial::write_buf(buf, len);
 	
 	return len;
 }

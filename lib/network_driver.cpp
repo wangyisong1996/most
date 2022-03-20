@@ -6,11 +6,14 @@
 #include <inc/e1000.hpp>
 #include <inc/virtio_net.hpp>
 #include <inc/multiboot2_loader.hpp>
+#include <inc/utils.hpp>
 
 namespace NetworkDriver {
 	uint8_t ip[4], mac[6];
 	uint8_t gateway[4];
 	uint8_t prefix_len;
+	uint8_t server_ip[4];
+	bool do_not_send_answer;
 	
 	static bool read_ip(const char *ip_str, uint8_t ip[4]) {
 		int r = sscanf(ip_str, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
@@ -29,6 +32,7 @@ namespace NetworkDriver {
 		bool has_valid_mac = false;
 		bool has_valid_gateway = false;
 		bool has_valid_prefix_len = false;
+		bool has_valid_server_ip = false;
 		
 		const char *ch = cmdline;
 		for (; *ch; ch++) {
@@ -50,6 +54,13 @@ namespace NetworkDriver {
 				has_valid_gateway = read_ip(content, gateway);
 			} else if (1 == sscanf(buf, " prefix_len = %hhu ", &prefix_len)) {
 				has_valid_prefix_len = prefix_len <= 32;
+			} else if (1 == sscanf(buf, " server_ip = %s", content)) {
+				has_valid_server_ip = read_ip(content, server_ip);
+			} else if (1 == sscanf(buf, " do_not_send_answer = %s", content)) {
+				int val;
+				if (1 == sscanf(content, "%d", &val)) {
+					do_not_send_answer = val != 0;
+				}
 			}
 		}
 		
@@ -61,6 +72,11 @@ namespace NetworkDriver {
 			LWARN("Invalid or unspecified mac, using defaults...");
 			uint8_t _mac[6] = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
 			memcpy(mac, _mac, 6 * sizeof(uint8_t));
+		}
+		
+		if (!has_valid_server_ip) {
+			LERROR("No valid server ip!");
+			Utils::GG_reboot();
 		}
 		
 		return true;

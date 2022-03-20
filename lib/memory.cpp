@@ -18,7 +18,8 @@ namespace Memory {
 	static uint64_t n_huge_pages = 0;
 	
 	// const uint64_t kernel_break = 4 << 20;  // 4 MiB
-	const uint64_t kernel_break = 8 << 20;  // 8 MiB
+	// const uint64_t kernel_break = 8 << 20;  // 8 MiB
+	const uint64_t kernel_break = 16 << 20;  // 16 MiB
 	// WARN: do not use elf.cpp anymore
 	
 	const uint64_t PTE_PRESENT = 1 << 0;

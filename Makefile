@@ -83,8 +83,8 @@ clean:
 DEFAULT_QEMUOPTS := -m 4096M -serial mon:stdio -no-reboot
 # DEFAULT_QEMUOPTS += -netdev type=tap,script=./ifup.sh,id=net0
 DEFAULT_QEMUOPTS += -netdev type=user,id=net0
-DEFAULT_QEMUOPTS += -device virtio-net-pci,netdev=net0
-# DEFAULT_QEMUOPTS += -device e1000,netdev=net0
+# DEFAULT_QEMUOPTS += -device virtio-net-pci,netdev=net0
+DEFAULT_QEMUOPTS += -device e1000,netdev=net0
 
 QEMUOPTS ?= $(DEFAULT_QEMUOPTS)
 

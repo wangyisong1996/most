@@ -8,6 +8,8 @@ namespace NetworkDriver {
 	extern uint8_t mac[6];
 	extern uint8_t gateway[4];
 	extern uint8_t prefix_len;
+	extern uint8_t server_ip[4];
+	extern bool do_not_send_answer;
 	
 	void init();
 	

@@ -37,7 +37,9 @@ static const char *invalid_buffer =
 static const int invalid_buffer_len = 256;
 
 // #define INIT_SERVER_IP IP4_ADDR(&server_ip, 47, 95, 111, 217)
-#define INIT_SERVER_IP IP4_ADDR(&server_ip, 172, 1, 1, 119)
+// #define INIT_SERVER_IP IP4_ADDR(&server_ip, 172, 1, 1, 119)
+// #define INIT_SERVER_IP IP4_ADDR(&server_ip, 59, 110, 124, 141)
+// "59.110.124.141"
 
 namespace Contestant {
 	static struct netif netif;
@@ -128,6 +130,8 @@ namespace Contestant {
 	}
 	
 	static void start_connecting_10001() {
+		LINFO("start_connecting 10001 (2/2)!");
+		
 		state = S_CONNECTING_10001;
 		conn_10001 = tcp_new();
 		assert(conn_10001 != NULL);
@@ -139,7 +143,7 @@ namespace Contestant {
 	}
 	
 	static void start_connecting() {
-		LINFO("start_connecting!");
+		LINFO("start_connecting 10002 (1/2)!");
 		
 		state = S_CONNECTING_10002;
 		conn_10002 = tcp_new();
@@ -175,15 +179,72 @@ namespace Contestant {
 		if (state != S_CONNECTED) return;
 		
 		(void)(buf), (void)(len);
-		tcp_write(conn_10002, buf, len, TCP_WRITE_FLAG_COPY);
-		tcp_output(conn_10002);
+		
+		if (!NetworkDriver::do_not_send_answer) {
+			tcp_write(conn_10002, buf, len, TCP_WRITE_FLAG_COPY);
+			tcp_output(conn_10002);
+		}
+	}
+	
+	static void loop_1e9() {
+		for (int i = 0; i < 1000000000; i++) {
+			__asm__ volatile ("");
+		}
+	}
+	
+	static void recv_1e7() {
+		for (int i = 0; i < 10000000; i += invalid_buffer_len) {
+			Solver::recv_input(invalid_buffer, invalid_buffer_len);
+			Solver::prepare();
+		}
+	}
+	
+	static double do_benchmark(void (*func)()) {
+		uint64_t t0 = __rdtsc();
+		func();
+		uint64_t t1 = __rdtsc();
+		
+		return Timer::tsc_to_secf(t1 - t0);
+	}
+	
+	static void benchmark() {
+		double t_loop_1e9 = do_benchmark(loop_1e9);
+		double t_recv_1e7 = do_benchmark(recv_1e7);
+		
+		LINFO(
+			"bench: loop_1e9 %.1lf ms (~%.2lf GHz), logic %.2lf ns/B",
+			t_loop_1e9 * 1e3, 1.0 / (t_loop_1e9 + 1e-9),
+			t_recv_1e7 * 1e2
+		);
+	}
+	
+	static void enable_turbo_boost() {
+		const uint32_t IA32_MISC_ENABLE = 416;
+		const uint64_t TURBO_MODE_DISABLE = 1ul << 38;
+		uint64_t misc = x86_64::rdmsr(IA32_MISC_ENABLE);
+		x86_64::wrmsr(IA32_MISC_ENABLE, misc & ~TURBO_MODE_DISABLE);
+		misc = x86_64::rdmsr(IA32_MISC_ENABLE) & TURBO_MODE_DISABLE;
+		LINFO("Enabled turbo boost: %d", misc ? 0 : 1);
+		const uint32_t IA32_PERF_CTL = 409;
+		const uint32_t freq = 46;  // freq * 100
+		x86_64::wrmsr(IA32_PERF_CTL, freq << 8);
+		LINFO("CPU Freq set to %u MHz", freq * 100);
 	}
 	
 	static void contestant_init() {
 		Solver::init(contestant_send);
-		Solver::print_stat(0);
+		Solver::prepare();
 		
-		INIT_SERVER_IP;
+		benchmark();
+		enable_turbo_boost();
+		benchmark();
+		
+		// INIT_SERVER_IP;
+		const uint8_t *ip = NetworkDriver::server_ip;
+		IP4_ADDR(&server_ip, ip[0], ip[1], ip[2], ip[3]);
+		
+		LINFO("server_ip %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+		LINFO("do_not_send_answer: %s", NetworkDriver::do_not_send_answer ? "yes" : "no");
 	}
 	
 	void run() {
@@ -195,9 +256,9 @@ namespace Contestant {
 			static char pkt[MTU + 64];
 			int len = NetworkDriver::receive(pkt);
 			
-			// check "udp and dport REDACTED"
+			// check "udp and dport 23579"
 			if (len >= 14 + 20 + 8
-				&& * (uint16_t *) (pkt + 14 + 20 + 2) == htons(REDACTED)) {
+				&& * (uint16_t *) (pkt + 14 + 20 + 2) == htons(23579)) {
 				Utils::GG_reboot();
 			}
 			

@@ -1,4 +1,4 @@
-# Codes for MO's Trading
+# Codes for MO's Trading (on-site)
 
 Run with `make run-lowlatency`.
 
